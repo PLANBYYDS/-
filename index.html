@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>杨氏双缝干涉实验 · 交互模拟</title>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:radial-gradient(1200px 800px at 50% -10%, #16233b 0%, #0a0f19 55%, #06090f 100%);
+    color:#d8e4f5;
+    font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    padding:18px 16px 40px;
+  }
+  .app{max-width:1180px;margin:0 auto;}
+  header{text-align:center;margin-bottom:14px;}
+  h1{
+    font-size:23px;margin:0 0 6px;letter-spacing:2px;font-weight:600;
+    background:linear-gradient(90deg,#8fd0ff,#b9a2ff,#8fd0ff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{margin:0;font-size:12.5px;color:#7d93b0;letter-spacing:.5px;}
+
+  .panel{
+    background:linear-gradient(180deg,rgba(20,30,48,.92),rgba(12,19,32,.92));
+    border:1px solid rgba(80,130,190,.22);
+    border-radius:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(120,180,255,.06);
+    padding:12px;
+  }
+  .stage{padding:8px;margin-bottom:16px;}
+  canvas{display:block;width:100%;height:auto;border-radius:9px;}
+
+  .grid{display:grid;grid-template-columns:352px 1fr;gap:16px;}
+  @media(max-width:920px){.grid{grid-template-columns:1fr;}}
+
+  .ctrl{margin-bottom:16px;}
+  .ctrl:last-child{margin-bottom:4px;}
+  .row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:#a9c0da;margin-bottom:7px;}
+  .row b{color:#7fd4ff;font-weight:600;font-variant-numeric:tabular-nums;font-size:13px;}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:4px;
+    background:linear-gradient(90deg,#1d3350,#2f6396);
+    outline:none;cursor:pointer;transition:opacity .2s;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:radial-gradient(circle at 35% 32%,#cfeeff,#3f9ee0 62%,#1b5b8f);
+    border:1px solid #9fdcff;
+    box-shadow:0 0 10px rgba(80,180,255,.85);
+    cursor:grab;
+  }
+  input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;}
+  input[type=range]::-moz-range-thumb{
+    width:16px;height:16px;border-radius:50%;
+    background:radial-gradient(circle at 35% 32%,#cfeeff,#3f9ee0 62%,#1b5b8f);
+    border:1px solid #9fdcff;box-shadow:0 0 10px rgba(80,180,255,.85);cursor:grab;
+  }
+  input[type=range]:disabled{opacity:.35;cursor:not-allowed;}
+
+  .seg{display:flex;gap:8px;margin-top:4px;}
+  .seg button{
+    flex:1;padding:8px 0;border-radius:9px;cursor:pointer;font-size:13px;
+    background:rgba(30,48,72,.9);color:#8ea9c7;
+    border:1px solid rgba(80,130,190,.3);
+    transition:.18s;font-family:inherit;
+  }
+  .seg button:hover{background:rgba(42,68,100,.95);color:#c7e4ff;}
+  .seg button.on{
+    background:linear-gradient(180deg,#2a6ea8,#1c4b76);
+    color:#eaf6ff;border-color:#5fb8ef;
+    box-shadow:0 0 14px rgba(70,170,255,.45);
+  }
+
+  .wheel-wrap{display:flex;align-items:center;gap:14px;margin-top:10px;transition:opacity .2s;}
+  .wheel-wrap.disabled{opacity:.28;pointer-events:none;}
+  #wheel{width:132px;height:132px;flex:none;cursor:crosshair;touch-action:none;border-radius:50%;
+    box-shadow:0 0 22px rgba(70,150,255,.18);}
+  .hint{margin:0;font-size:11.5px;color:#6d84a2;line-height:1.7;}
+
+  .view-panel{display:flex;flex-direction:column;gap:10px;}
+  .label{font-size:12px;color:#7d93b0;letter-spacing:.6px;margin:0 0 -4px 2px;}
+  #screen{border:1px solid rgba(90,150,210,.28);box-shadow:inset 0 0 40px rgba(0,0,0,.9);}
+  #profile{background:rgba(8,13,22,.9);border:1px solid rgba(80,130,190,.2);}
+
+  .stats{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:2px;
+  }
+  .stat{
+    background:rgba(16,26,42,.85);border:1px solid rgba(80,130,190,.22);
+    border-radius:10px;padding:8px 10px;text-align:center;
+  }
+  .stat span{display:block;font-size:11px;color:#6d84a2;margin-bottom:3px;}
+  .stat b{font-size:14px;color:#7fd4ff;font-weight:600;font-variant-numeric:tabular-nums;}
+
+  .note{
+    font-size:11.5px;color:#6d84a2;line-height:1.75;margin:10px 0 0;
+    border-top:1px dashed rgba(80,130,190,.25);padding-top:10px;
+  }
+  .note code{color:#8fc9ff;background:rgba(40,80,130,.35);padding:1px 5px;border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>杨氏双缝干涉实验</h1>
+    <p class="sub">拖动滑块 / 点击色盘 · 实时观察接收屏上的干涉条纹</p>
+  </header>
+
+  <section class="panel stage">
+    <canvas id="setup"></canvas>
+  </section>
+
+  <div class="grid">
+
+    <!-- ================= 控制区 ================= -->
+    <section class="panel">
+      <div class="ctrl">
+        <div class="row"><span>单缝 S 与双缝间距 R</span><b id="vR">10.0 cm</b></div>
+        <input type="range" id="sR" min="2" max="20" step="0.1" value="10">
+      </div>
+
+      <div class="ctrl">
+        <div class="row"><span>双缝间距 d</span><b id="vd">0.200 mm</b></div>
+        <input type="range" id="sd" min="0.06" max="0.60" step="0.005" value="0.2">
+      </div>
+
+      <div class="ctrl">
+        <div class="row"><span>双缝到接收屏距离 D</span><b id="vD">1.00 m</b></div>
+        <input type="range" id="sD" min="0.5" max="3" step="0.01" value="1">
+      </div>
+
+      <div class="ctrl">
+        <div class="row"><span>光源类型</span><b id="vMode">单色光</b></div>
+        <div class="seg">
+          <button data-mode="mono" class="on">单色光</button>
+          <button data-mode="white">白光</button>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <div class="row"><span>可见光波长 λ</span><b id="vL">550 nm</b></div>
+        <input type="range" id="sL" min="400" max="700" step="1" value="550">
+        <div class="wheel-wrap">
+          <canvas id="wheel"></canvas>
+          <p class="hint">点击或拖动色盘<br>选择可见光颜色<br>（等价于选择波长）</p>
+        </div>
+      </div>
+
+      <p class="note">
+        物理规律：条纹间距 <code>Δy = λD / d</code>。<br>
+        R 只改变到达双缝的光强（整体亮度），<strong>不改变条纹间距</strong>；
+        条纹强度按 <code>I = cos²(πd·sinθ/λ) · sinc²(πa·sinθ/λ)</code> 分布（含单缝衍射包络）。
+      </p>
+    </section>
+
+    <!-- ================= 接收屏 ================= -->
+    <section class="panel view-panel">
+      <p class="label">接收屏 · 干涉条纹</p>
+      <canvas id="screen"></canvas>
+
+      <p class="label">屏幕上的相对光强分布 I(y)</p>
+      <canvas id="profile"></canvas>
+
+      <div class="stats">
+        <div class="stat"><span>条纹间距 Δy</span><b id="dy">2.750 mm</b></div>
+        <div class="stat"><span>视场内明纹数</span><b id="nf">7.3</b></div>
+        <div class="stat"><span>视场宽度</span><b>20.0 mm</b></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   基本工具
+   ===================================================================== */
+const el = id => document.getElementById(id);
+const DPR = 2;
+
+function setupCanvas(cv, w, h){
+  cv.width  = Math.round(w * DPR);
+  cv.height = Math.round(h * DPR);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  return ctx;
+}
+
+/* 波长(nm) -> RGB  (Bruton 近似) */
+function wlToRGB(wl){
+  let R = 0, G = 0, B = 0;
+  if (wl >= 380 && wl < 440)      { R = -(wl - 440) / 60; B = 1; }
+  else if (wl < 490)              { G = (wl - 440) / 50;  B = 1; }
+  else if (wl < 510)              { G = 1; B = -(wl - 510) / 20; }
+  else if (wl < 580)              { R = (wl - 510) / 70;  G = 1; }
+  else if (wl < 645)              { R = 1; G = -(wl - 645) / 65; }
+  else if (wl <= 780)             { R = 1; }
+
+  let f = 1;
+  if (wl >= 380 && wl < 420)      f = 0.3 + 0.7 * (wl - 380) / 40;
+  else if (wl > 700 && wl <= 780) f = 0.3 + 0.7 * (780 - wl) / 80;
+
+  const g = 0.8;
+  return [
+    Math.round(255 * Math.pow(Math.max(R * f, 0), g)),
+    Math.round(255 * Math.pow(Math.max(G * f, 0), g)),
+    Math.round(255 * Math.pow(Math.max(B * f, 0), g))
+  ];
+}
+
+/* =====================================================================
+   全局状态（SI 换算在计算时进行）
+   ===================================================================== */
+const state = {
+  R: 10.0,       // cm   单缝与双缝间距
+  d: 0.200,      // mm   双缝间距
+  D: 1.00,       // m    双缝到屏距离
+  lambda: 550,   // nm   波长
+  white: false,  // 是否白光
+  a: 0.030       // mm   单缝/双缝缝宽（固定，用于衍射包络）
+};
+
+const HALF_W = 10;   // 接收屏视场半宽（mm）→ 视场共 20 mm
+
+/* =====================================================================
+   物理计算
+   ===================================================================== */
+function intensityAt(yMM, lambdaNM, st){
+  const lambda = lambdaNM * 1e-9;      // m
+  const dM     = st.d * 1e-3;          // m
+  const aM     = st.a * 1e-3;          // m
+  const sinT   = (yMM * 1e-3) / st.D;  // 小角度近似 sinθ ≈ y/D
+
+  const alpha = Math.PI * dM * sinT / lambda;  // 双缝相位差的一半
+  const beta  = Math.PI * aM * sinT / lambda;  // 单缝衍射参数
+
+  const c  = Math.cos(alpha);
+  const s  = Math.abs(beta) < 1e-12 ? 1 : Math.sin(beta) / beta;
+  return c * c * s * s;
+}
+
+/* R 对整体亮度的影响（只影响亮度，不影响条纹间距） */
+function brightnessFactor(st){
+  return 0.60 + 0.40 * (1 - (st.R - 2) / 18);
+}
+
+/* 某屏幕位置 y(mm) 的实际颜色 */
+function colorAt(yMM, st){
+  let r, g, b;
+
+  if (st.white){
+    r = g = b = 0;
+    let n = 0;
+    for (let wl = 400; wl <= 700; wl += 10){
+      const c = wlToRGB(wl);
+      const I = intensityAt(yMM, wl, st);
+      r += c[0] * I; g += c[1] * I; b += c[2] * I;
+      n++;
+    }
+    const k = 255 / (n * 115);   // 归一化，使中央明纹接近纯白
+    r *= k; g *= k; b *= k;
+  } else {
+    const c = wlToRGB(st.lambda);
+    const I = intensityAt(yMM, st.lambda, st);
+    r = c[0] * I; g = c[1] * I; b = c[2] * I;
+  }
+
+  const br = brightnessFactor(st);
+  return [
+    Math.max(0, Math.min(255, r * br)),
+    Math.max(0, Math.min(255, g * br)),
+    Math.max(0, Math.min(255, b * br))
+  ];
+}
+
+/* =====================================================================
+   画布初始化
+   ===================================================================== */
+const SETUP_W = 760, SETUP_H = 260;
+const SCR_W   = 760, SCR_H   = 170;
+const PROF_W  = 760, PROF_H  = 120;
+
+const setupCtx = setupCanvas(el('setup'),   SETUP_W, SETUP_H);
+const scrCtx   = setupCanvas(el('screen'),  SCR_W,   SCR_H);
+const profCtx  = setupCanvas(el('profile'), PROF_W,  PROF_H);
+
+/* 接收屏：离屏 1px 高缓冲区 */
+const NCOL = 1520;
+const offCv  = document.createElement('canvas');
+offCv.width  = NCOL;
+offCv.height = 1;
+const offCtx = offCv.getContext('2d');
+const offImg = offCtx.createImageData(NCOL, 1);
+
+/* =====================================================================
+   装置示意图
+   ===================================================================== */
+function dimLine(ctx, x1, x2, y, label){
+  ctx.strokeStyle = 'rgba(130,175,235,0.45)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(130,175,235,0.55)';
+  [[x1, 1], [x2, -1]].forEach(([x, dir]) => {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + dir * 7, y - 4);
+    ctx.lineTo(x + dir * 7, y + 4);
+    ctx.closePath();
+    ctx.fill();
+  });
+
+  ctx.beginPath(); ctx.moveTo(x1, y - 6); ctx.lineTo(x1, y + 6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2, y - 6); ctx.lineTo(x2, y + 6); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(170,205,245,0.92)';
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, (x1 + x2) / 2, y - 10);
+}
+
+function drawSetup(){
+  const ctx = setupCtx;
+  const W = SETUP_W, H = SETUP_H, cy = 130;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(8,13,23,0.85)';
+  ctx.fillRect(0, 0, W, H);
+
+  /* 背景网格 */
+  ctx.strokeStyle = 'rgba(70,110,160,0.07)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= W; x += 38){ ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += 38){ ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  const lc = state.white ? 'rgb(255,255,255)' : `rgb(${wlToRGB(state.lambda).join(',')})`;
+
+  const xL   = 58;
+  const xD   = 430;
+  const xScr = 690;
+  const Rpx  = 60 + ((state.R - 2) / 18) * 230;   // 60 → 290 px
+  const xS   = xD - Rpx;
+
+  /* 光轴 */
+  ctx.strokeStyle = 'rgba(120,170,230,0.22)';
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath(); ctx.moveTo(xL, cy); ctx.lineTo(xScr + 22, cy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* 光源 → 单缝 */
+  ctx.save();
+  ctx.globalAlpha = 0.20;
+  ctx.fillStyle = lc;
+  ctx.beginPath();
+  ctx.moveTo(xL + 8, cy - 9);
+  ctx.lineTo(xS, cy - 5);
+  ctx.lineTo(xS, cy + 5);
+  ctx.lineTo(xL + 8, cy + 9);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  /* 单缝 → 双缝（衍射发散） */
+  ctx.save();
+  ctx.globalAlpha = 0.13;
+  ctx.fillStyle = lc;
+  ctx.beginPath();
+  ctx.moveTo(xS, cy - 6);
+  ctx.lineTo(xD, cy - 78);
+  ctx.lineTo(xD, cy + 78);
+  ctx.lineTo(xS, cy + 6);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  /* 双缝 → 接收屏 */
+  const sep = 9 + (state.d / 0.6) * 30;   // 视觉半间距
+  ctx.save();
+  ctx.globalAlpha = 0.10;
+  ctx.fillStyle = lc;
+  [-sep, sep].forEach(s => {
+    ctx.beginPath();
+    ctx.moveTo(xD, cy + s);
+    ctx.lineTo(xScr, cy - 105);
+    ctx.lineTo(xScr, cy + 105);
+    ctx.closePath(); ctx.fill();
+  });
+  ctx.restore();
+
+  /* 挡板 */
+  ctx.fillStyle = '#33405a';
+  ctx.fillRect(xS - 3, cy - 72, 6, 66);
+  ctx.fillRect(xS - 3, cy + 6,  6, 66);
+
+  ctx.fillRect(xD - 3, cy - 78, 6, 78 - sep - 4);
+  ctx.fillRect(xD - 3, cy - sep + 4, 6, 2 * sep - 8);
+  ctx.fillRect(xD - 3, cy + sep + 4, 6, 78 - sep - 4);
+
+  /* 光源球 */
+  const grd = ctx.createRadialGradient(xL, cy, 1, xL, cy, 26);
+  grd.addColorStop(0, '#ffffff');
+  grd.addColorStop(0.35, lc);
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath(); ctx.arc(xL, cy, 26, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = lc;
+  ctx.beginPath(); ctx.arc(xL, cy, 9, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(xL, cy, 9, 0, Math.PI * 2); ctx.stroke();
+
+  /* 接收屏 */
+  ctx.fillStyle = '#0a1020';
+  ctx.fillRect(xScr, cy - 105, 16, 210);
+
+  for (let i = 0; i < 210; i++){
+    const yMM = ((i + 0.5) / 210 * 2 - 1) * HALF_W;
+    const c = colorAt(yMM, state);
+    ctx.fillStyle = `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+    ctx.fillRect(xScr + 2, cy - 105 + i, 12, 1);
+  }
+  ctx.strokeStyle = 'rgba(130,175,235,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(xScr, cy - 105, 16, 210);
+
+  /* 文字标注 */
+  ctx.fillStyle = 'rgba(170,205,245,0.9)';
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('光源', xL, cy + 48);
+  ctx.fillText('单缝 S', xS, cy - 82);
+  ctx.fillText('双缝 S₁ S₂', xD, cy - 92);
+  ctx.fillText('接收屏', xScr + 8, cy - 116);
+
+  /* 尺寸线 */
+  dimLine(ctx, xS, xD,   cy - 108, `R = ${state.R.toFixed(1)} cm`);
+  dimLine(ctx, xD, xScr, cy + 118, `D = ${state.D.toFixed(2)} m`);
+}
+
+/* =====================================================================
+   接收屏条纹
+   ===================================================================== */
+function drawScreen(){
+  const data = offImg.data;
+  for (let i = 0; i < NCOL; i++){
+    const yMM = ((i + 0.5) / NCOL * 2 - 1) * HALF_W;
+    const c = colorAt(yMM, state);
+    const k = i * 4;
+    data[k]     = c[0];
+    data[k + 1] = c[1];
+    data[k + 2] = c[2];
+    data[k + 3] = 255;
+  }
+  offCtx.putImageData(offImg, 0, 0);
+
+  scrCtx.clearRect(0, 0, SCR_W, SCR_H);
+  scrCtx.fillStyle = '#04060a';
+  scrCtx.fillRect(0, 0, SCR_W, SCR_H);
+  scrCtx.imageSmoothingEnabled = true;
+  scrCtx.drawImage(offCv, 0, 0, NCOL, 1, 0, 0, SCR_W, SCR_H);
+
+  /* 刻度 */
+  scrCtx.strokeStyle = 'rgba(150,200,255,0.30)';
+  scrCtx.fillStyle   = 'rgba(150,200,255,0.55)';
+  scrCtx.lineWidth = 1;
+  scrCtx.font = '10px system-ui, sans-serif';
+  scrCtx.textAlign = 'center';
+  for (let mm = -10; mm <= 10; mm += 2){
+    const x = (mm / (2 * HALF_W) + 0.5) * SCR_W;
+    scrCtx.beginPath();
+    scrCtx.moveTo(x, SCR_H - 8);
+    scrCtx.lineTo(x, SCR_H);
+    scrCtx.stroke();
+    if (mm % 10 === 0) scrCtx.fillText(mm + ' mm', x, SCR_H - 12);
+  }
+}
+
+/* =====================================================================
+   光强分布曲线
+   ===================================================================== */
+function drawProfile(){
+  const ctx = profCtx;
+  const W = PROF_W, H = PROF_H;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(8,13,22,0.92)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = 'rgba(80,120,170,0.14)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 5; i++){
+    const y = H * i / 5;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  const N = 420;
+  const pts = new Float32Array(N + 1);
+  for (let i = 0; i <= N; i++){
+    const yMM = (i / N * 2 - 1) * HALF_W;
+    pts[i] = intensityAt(yMM, state.lambda, state);
+  }
+
+  const c = wlToRGB(state.lambda);
+  const baseY = H - 4;
+
+  /* 填充 */
+  ctx.beginPath();
+  ctx.moveTo(0, baseY);
+  for (let i = 0; i <= N; i++){
+    ctx.lineTo(i / N * W, baseY - pts[i] * (H - 12));
+  }
+  ctx.lineTo(W, baseY);
+  ctx.closePath();
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},0.55)`);
+  g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0.04)`);
+  ctx.fillStyle = g;
+  ctx.fill();
+
+  /* 曲线 */
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++){
+    const x = i / N * W;
+    const y = baseY - pts[i] * (H - 12);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},0.95)`;
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  /* 基线 */
+  ctx.strokeStyle = 'rgba(150,190,240,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, baseY); ctx.lineTo(W, baseY); ctx.stroke();
+
+  /* 中央 y=0 参考线 */
+  ctx.strokeStyle = 'rgba(150,190,240,0.14)';
+  ctx.setLineDash([4, 5]);
+  ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/* =====================================================================
+   色盘
+   ===================================================================== */
+const WHEEL = 132;
+const wheelCv = el('wheel');
+wheelCv.width  = WHEEL * DPR;
+wheelCv.height = WHEEL * DPR;
+const wctx = wheelCv.getContext('2d');
+wctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+const wheelBase = document.createElement('canvas');
+wheelBase.width  = WHEEL * DPR;
+wheelBase.height = WHEEL * DPR;
+const wbctx = wheelBase.getContext('2d');
+wbctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+const WC = WHEEL / 2;
+const WR = 58;
+
+(function buildWheel(){
+  for (let a = 0; a < 360; a += 1){
+    const wl = 400 + (a / 360) * 300;
+    const [r, g, b] = wlToRGB(wl);
+    wbctx.beginPath();
+    wbctx.moveTo(WC, WC);
+    wbctx.arc(WC, WC, WR, (a - 1.3) * Math.PI / 180, (a + 1.3) * Math.PI / 180);
+    wbctx.closePath();
+    wbctx.fillStyle = `rgb(${r},${g},${b})`;
+    wbctx.fill();
+  }
+  /* 中心挖空 */
+  wbctx.beginPath();
+  wbctx.arc(WC, WC, 21, 0, Math.PI * 2);
+  wbctx.fillStyle = 'rgba(12,19,32,0.95)';
+  wbctx.fill();
+  wbctx.strokeStyle = 'rgba(120,175,235,0.35)';
+  wbctx.lineWidth = 1;
+  wbctx.stroke();
+})();
+
+function drawWheelMarker(){
+  wctx.clearRect(0, 0, WHEEL, WHEEL);
+  wctx.drawImage(wheelBase, 0, 0, WHEEL, WHEEL);
+
+  const ang = ((state.lambda - 400) / 300) * Math.PI * 2;
+  const mx = WC + Math.cos(ang) * (WR - 8);
+  const my = WC + Math.sin(ang) * (WR - 8);
+
+  wctx.beginPath(); wctx.arc(mx, my, 8, 0, Math.PI * 2);
+  wctx.strokeStyle = 'rgba(0,0,0,0.55)'; wctx.lineWidth = 5; wctx.stroke();
+  wctx.strokeStyle = '#ffffff'; wctx.lineWidth = 2; wctx.stroke();
+
+  wctx.beginPath(); wctx.arc(mx, my, 4, 0, Math.PI * 2);
+  wctx.fillStyle = '#ffffff'; wctx.fill();
+}
+
+function pickFromWheel(ev){
+  const rect = wheelCv.getBoundingClientRect();
+  const x = (ev.clientX - rect.left) * (WHEEL / rect.width) - WC;
+  const y = (ev.clientY - rect.top)  * (WHEEL / rect.height) - WC;
+  let ang = Math.atan2(y, x) * 180 / Math.PI;
+  if (ang < 0) ang += 360;
+  const wl = Math.round(400 + (ang / 360) * 300);
+  if (state.white) setWhiteMode(false);
+  setLambda(wl);
+}
+
+let wheelDragging = false;
+wheelCv.addEventListener('pointerdown', e => {
+  wheelDragging = true;
+  try { wheelCv.setPointerCapture(e.pointerId); } catch(_) {}
+  pickFromWheel(e);
+});
+wheelCv.addEventListener('pointermove', e => { if (wheelDragging) pickFromWheel(e); });
+wheelCv.addEventListener('pointerup',   () => { wheelDragging = false; });
+wheelCv.addEventListener('pointercancel', () => { wheelDragging = false; });
+
+/* =====================================================================
+   数值 / 状态更新
+   ===================================================================== */
+function updateReadouts(){
+  el('vR').textContent = state.R.toFixed(1) + ' cm';
+  el('vd').textContent = state.d.toFixed(3) + ' mm';
+  el('vD').textContent = state.D.toFixed(2) + ' m';
+  el('vL').textContent = state.white ? '白光 (400–700 nm)' : state.lambda + ' nm';
+  el('vMode').textContent = state.white ? '白光' : '单色光';
+
+  const dyMM = (state.lambda * 1e-9 * state.D) / (state.d * 1e-3) * 1000;
+  el('dy').textContent = dyMM.toFixed(3) + ' mm';
+  el('nf').textContent = (2 * HALF_W / dyMM).toFixed(1);
+}
+
+/* =====================================================================
+   总渲染
+   ===================================================================== */
+function renderAll(){
+  drawSetup();
+  drawScreen();
+  drawProfile();
+  updateReadouts();
+  drawWheelMarker();
+}
+
+/* =====================================================================
+   交互绑定
+   ===================================================================== */
+function setLambda(v){
+  state.lambda = Math.max(400, Math.min(700, Math.round(v)));
+  el('sL').value = state.lambda;
+  renderAll();
+}
+
+function setWhiteMode(isWhite){
+  state.white = isWhite;
+  el('sL').disabled = isWhite;
+  document.querySelector('.wheel-wrap').classList.toggle('disabled', isWhite);
+  document.querySelectorAll('.seg button').forEach(btn => {
+    btn.classList.toggle('on', (btn.dataset.mode === 'white') === isWhite);
+  });
+  renderAll();
+}
+
+el('sR').addEventListener('input', e => { state.R = parseFloat(e.target.value); renderAll(); });
+el('sd').addEventListener('input', e => { state.d = parseFloat(e.target.value); renderAll(); });
+el('sD').addEventListener('input', e => { state.D = parseFloat(e.target.value); renderAll(); });
+el('sL').addEventListener('input', e => { setLambda(parseFloat(e.target.value)); });
+
+document.querySelectorAll('.seg button').forEach(btn => {
+  btn.addEventListener('click', () => setWhiteMode(btn.dataset.mode === 'white'));
+});
+
+/* =====================================================================
+   启动
+   ===================================================================== */
+renderAll();
+</script>
+</body>
+</html>
